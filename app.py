@@ -145,10 +145,16 @@ def delete(filename):
 	)
 	return simplejson.dumps({filename: 'True'})
 
+
 # serve static files
 @app.route("/thumbnail/<string:filename>", methods=['GET'])
 def get_thumbnail(filename):
-    return send_from_directory(app.config['THUMBNAIL_FOLDER'], filename=filename)
+	thumbnailfilename = 'thumbnail'.join(filename)
+	obj = bucket.Object(thumbnailfilename)
+	content = obj.get()	
+	response = make_response(content['Body'].read())
+	response.headers['Content-Type'] =  'image/jpeg'
+	return response
 
 
 @app.route("/data/<string:filename>", methods=['GET'])
