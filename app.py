@@ -66,11 +66,14 @@ def gen_file_name(filename):
 def create_thumbnail(image):
     try:
         base_width = 80
-        img = Image.open(os.path.join(app.config['UPLOAD_FOLDER'], image))
+        with open('filename', 'wb') as data:
+        	bucket.download_fileobj(image, data)
+		img = Image.open(data)
         w_percent = (base_width / float(img.size[0]))
         h_size = int((float(img.size[1]) * float(w_percent)))
         img = img.resize((base_width, h_size), PIL.Image.ANTIALIAS)
-        img.save(os.path.join(app.config['THUMBNAIL_FOLDER'], image))
+        thumbnailfilename = 'thumbnail/'.join(image)
+        s3client.put_object(Bucket=app.config["BUCKET_NAME"], Key=thumbnailfilename, Body=img)
 
         return True
 
@@ -113,7 +116,6 @@ def upload():
         
         file_display = []
 
-        #for key in bucket.get_available_subresources():        
         for obj in bucket.objects.all():
         	#print(obj.key)
         	#print "{name}\t{size}\t{modified}".format(
@@ -149,7 +151,8 @@ def delete(filename):
 # serve static files
 @app.route("/thumbnail/<string:filename>", methods=['GET'])
 def get_thumbnail(filename):
-	thumbnailfilename = 'thumbnail'.join(filename)
+	thumbnailfilename = 'thumbnail/' + filename
+	#print "Thumbnail filename is {name}".format(name = thumbnailfilename)
 	obj = bucket.Object(thumbnailfilename)
 	content = obj.get()	
 	response = make_response(content['Body'].read())
@@ -174,17 +177,5 @@ def index():
 if __name__ == '__main__':
     app.run(debug=True)
 
-        #files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'],f)) and f not in IGNORED_FILES ]
-        #for f in files:
-        #    size = os.path.getsize(os.path.join(app.config['UPLOAD_FOLDER'], f))
-        #    file_saved = s3uploadfile(s3client,name=f, size=size)
-        #    file_display.append(file_saved.get_file())
-
-
-        	#print "{name}\t{size}\t{modified}".format(
-            #    name = key.name,
-            #    size = key.size,
-            #    modified = key.last_modified,
-            #    )
 
 
