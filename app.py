@@ -116,13 +116,7 @@ def upload():
         
         file_display = []
 
-        for obj in bucket.objects.all():
-        	#print(obj.key)
-        	#print "{name}\t{size}\t{modified}".format(
-        	#	name = obj.key,
-        	#	size = obj.size,
-        	#	modified = obj.last_modified
-        	#	)        
+        for obj in bucket.objects.all():  
 			name = obj.key        	
 			size = obj.size
 			file_saved = s3uploadfile(name=name, size=size)
