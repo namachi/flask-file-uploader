@@ -10,12 +10,15 @@ import PIL
 from PIL import Image
 import simplejson
 import traceback
+import boto3
+import uuid
 
 from flask import Flask, request, render_template, redirect, url_for, send_from_directory
 from flask_bootstrap import Bootstrap
 from werkzeug import secure_filename
 
 from lib.upload_file import uploadfile
+from lib.s3upload_file import s3uploadfile
 
 
 app = Flask(__name__)
@@ -23,11 +26,19 @@ app.config['SECRET_KEY'] = 'hard to guess string'
 app.config['UPLOAD_FOLDER'] = 'data/'
 app.config['THUMBNAIL_FOLDER'] = 'data/thumbnail/'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+app.config["BUCKET_NAME"] = 'flaskdemo'.format(uuid.uuid4())
 
 ALLOWED_EXTENSIONS = set(['txt', 'gif', 'png', 'jpg', 'jpeg', 'bmp', 'rar', 'zip', '7zip', 'doc', 'docx'])
 IGNORED_FILES = set(['.gitignore'])
 
 bootstrap = Bootstrap(app)
+
+#S3client object
+s3client = boto3.client('s3')
+#S3 resource object
+s3resource = boto3.resource('s3')
+#bucket object
+bucket = s3resource.Bucket(app.config["BUCKET_NAME"])
 
 
 def allowed_file(filename):
@@ -72,26 +83,25 @@ def upload():
 
         if files:
             filename = secure_filename(files.filename)
-            filename = gen_file_name(filename)
+            #filename = gen_file_name(filename)
             mime_type = files.content_type
 
             if not allowed_file(files.filename):
-                result = uploadfile(name=filename, type=mime_type, size=0, not_allowed_msg="File type not allowed")
+                result = s3uploadfile(s3client, name=filename, type=mime_type, size=0, not_allowed_msg="File type not allowed")
 
             else:
                 # save file to disk
-                uploaded_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                files.save(uploaded_file_path)
-
+                s3client.put_object(Bucket=app.config["BUCKET_NAME"], Key=filename, Body=files)  #Body=b'It is a test') 
+                
                 # create thumbnail after saving
                 if mime_type.startswith('image'):
                     create_thumbnail(filename)
                 
                 # get file size after saving
-                size = os.path.getsize(uploaded_file_path)
+                size = files.content_length
 
                 # return json for js call back
-                result = uploadfile(name=filename, type=mime_type, size=size)
+                result = s3uploadfile(s3client, name=filename, type=mime_type, size=size)
             
             return simplejson.dumps({"files": [result.get_file()]})
 
@@ -103,7 +113,7 @@ def upload():
 
         for f in files:
             size = os.path.getsize(os.path.join(app.config['UPLOAD_FOLDER'], f))
-            file_saved = uploadfile(name=f, size=size)
+            file_saved = s3uploadfile(s3client,name=f, size=size)
             file_display.append(file_saved.get_file())
 
         return simplejson.dumps({"files": file_display})
@@ -113,20 +123,17 @@ def upload():
 
 @app.route("/delete/<string:filename>", methods=['DELETE'])
 def delete(filename):
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file_thumb_path = os.path.join(app.config['THUMBNAIL_FOLDER'], filename)
-
-    if os.path.exists(file_path):
-        try:
-            os.remove(file_path)
-
-            if os.path.exists(file_thumb_path):
-                os.remove(file_thumb_path)
-            
-            return simplejson.dumps({filename: 'True'})
-        except:
-            return simplejson.dumps({filename: 'False'})
-
+	obj = bucket.Object(filename)
+	response = bucket.delete_objects(
+		Delete={
+			'Objects': [
+				{
+					'Key' : filename,
+				}
+			]
+		}
+	)
+	return simplejson.dumps({filename: 'True'})
 
 # serve static files
 @app.route("/thumbnail/<string:filename>", methods=['GET'])
@@ -136,8 +143,9 @@ def get_thumbnail(filename):
 
 @app.route("/data/<string:filename>", methods=['GET'])
 def get_file(filename):
+    #return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER']), filename=filename)
+    s3client.put_object(Bucket=app.config["BUCKET_NAME"], Key=filename, Body=files)
     return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER']), filename=filename)
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
