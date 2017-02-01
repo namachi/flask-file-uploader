@@ -24,10 +24,12 @@ from lib.s3upload_file import s3uploadfile
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'hard to guess string'
-app.config['UPLOAD_FOLDER'] = 'data/'
-app.config['THUMBNAIL_FOLDER'] = 'data/thumbnail/'
+app.config['BUCKET_NAME'] = 'flaskdemo'.format(uuid.uuid4())
+app.config['THUMBNAIL_FOLDER'] = '/thumbnail/'
+#app.config['UPLOAD_FOLDER'] = 'data/'
+#app.config['THUMBNAIL_FOLDER'] = 'data/thumbnail/'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
-app.config["BUCKET_NAME"] = 'flaskdemo'.format(uuid.uuid4())
+
 
 ALLOWED_EXTENSIONS = set(['txt', 'gif', 'png', 'jpg', 'jpeg', 'bmp', 'rar', 'zip', '7zip', 'doc', 'docx'])
 IGNORED_FILES = set(['.gitignore'])
@@ -88,7 +90,7 @@ def upload():
             mime_type = files.content_type
 
             if not allowed_file(files.filename):
-                result = s3uploadfile(s3client, name=filename, type=mime_type, size=0, not_allowed_msg="File type not allowed")
+                result = s3uploadfile(name=filename, type=mime_type, size=0, not_allowed_msg="File type not allowed")
 
             else:
                 # save file to disk
@@ -102,21 +104,28 @@ def upload():
                 size = files.content_length
 
                 # return json for js call back
-                result = s3uploadfile(s3client, name=filename, type=mime_type, size=size)
+                result = s3uploadfile(name=filename, type=mime_type, size=size)
             
             return simplejson.dumps({"files": [result.get_file()]})
 
     if request.method == 'GET':
         # get all file in ./data directory
-        files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'],f)) and f not in IGNORED_FILES ]
         
         file_display = []
 
-        for f in files:
-            size = os.path.getsize(os.path.join(app.config['UPLOAD_FOLDER'], f))
-            file_saved = s3uploadfile(s3client,name=f, size=size)
-            file_display.append(file_saved.get_file())
-
+        #for key in bucket.get_available_subresources():        
+        for obj in bucket.objects.all():
+        	#print(obj.key)
+        	#print "{name}\t{size}\t{modified}".format(
+        	#	name = obj.key,
+        	#	size = obj.size,
+        	#	modified = obj.last_modified
+        	#	)        
+			name = obj.key        	
+			size = obj.size
+			file_saved = s3uploadfile(name=name, size=size)
+			file_display.append(file_saved.get_file()) 
+            
         return simplejson.dumps({"files": file_display})
 
     return redirect(url_for('index'))
@@ -158,3 +167,18 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+        #files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'],f)) and f not in IGNORED_FILES ]
+        #for f in files:
+        #    size = os.path.getsize(os.path.join(app.config['UPLOAD_FOLDER'], f))
+        #    file_saved = s3uploadfile(s3client,name=f, size=size)
+        #    file_display.append(file_saved.get_file())
+
+
+        	#print "{name}\t{size}\t{modified}".format(
+            #    name = key.name,
+            #    size = key.size,
+            #    modified = key.last_modified,
+            #    )
+
+
