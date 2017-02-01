@@ -3,13 +3,14 @@ import boto3
 import uuid
 
 class s3uploadfile():
-    def __init__(self, s3client, name, type=None, size=None, not_allowed_msg=''):
+    def __init__(self, s3client, name, type=None, size=None, url=None, not_allowed_msg=''):
 		self.s3client = s3client
 		self.name = name
 		self.type = type
 		self.size = size
 		self.not_allowed_msg = not_allowed_msg
-		self.url = "data/%s" % name
+		#self.url = "data/%s" % name
+		self.url = url
 		self.thumbnail_url = "thumbnail/%s" % name
 		self.delete_url = "delete/%s" % name
 		self.delete_type = "DELETE"
