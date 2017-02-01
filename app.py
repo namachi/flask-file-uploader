@@ -97,7 +97,7 @@ def upload():
 
             else:
                 # save file to disk
-                s3client.put_object(Bucket=app.config["BUCKET_NAME"], Key=filename, Body=files)  #Body=b'It is a test') 
+                s3client.put_object(Bucket=app.config["BUCKET_NAME"], Key=filename, Body=files) 
                 
                 # create thumbnail after saving
                 if mime_type.startswith('image'):
