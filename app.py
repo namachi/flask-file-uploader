@@ -12,8 +12,9 @@ import simplejson
 import traceback
 import boto3
 import uuid
+import imghdr
 
-from flask import Flask, request, render_template, redirect, url_for, send_from_directory
+from flask import Flask, request, Response, make_response, render_template, redirect, url_for, send_from_directory
 from flask_bootstrap import Bootstrap
 from werkzeug import secure_filename
 
@@ -123,7 +124,7 @@ def upload():
 
 @app.route("/delete/<string:filename>", methods=['DELETE'])
 def delete(filename):
-	obj = bucket.Object(filename)
+	#obj = bucket.Object(filename)
 	response = bucket.delete_objects(
 		Delete={
 			'Objects': [
@@ -143,9 +144,12 @@ def get_thumbnail(filename):
 
 @app.route("/data/<string:filename>", methods=['GET'])
 def get_file(filename):
-    #return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER']), filename=filename)
-    s3client.put_object(Bucket=app.config["BUCKET_NAME"], Key=filename, Body=files)
-    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER']), filename=filename)
+	obj = bucket.Object(filename)
+	content = obj.get()	
+	response = make_response(content['Body'].read())
+	response.headers['Content-Type'] =  'image/jpeg'
+	return response
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
