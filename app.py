@@ -152,7 +152,6 @@ def delete(filename):
 @app.route("/thumbnail/<string:filename>", methods=['GET'])
 def get_thumbnail(filename):
 	thumbnailfilename = 'thumbnail/' + filename
-	#print "Thumbnail filename is {name}".format(name = thumbnailfilename)
 	obj = bucket.Object(thumbnailfilename)
 	content = obj.get()	
 	response = make_response(content['Body'].read())
