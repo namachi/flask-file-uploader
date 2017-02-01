@@ -72,7 +72,8 @@ def create_thumbnail(image):
         w_percent = (base_width / float(img.size[0]))
         h_size = int((float(img.size[1]) * float(w_percent)))
         img = img.resize((base_width, h_size), PIL.Image.ANTIALIAS)
-        thumbnailfilename = 'thumbnail/'.join(image)
+        thumbnailfilename = 'thumbnail/' + image
+        print 'Thumbnail filename create is ' + thumbnailfilename
         s3client.put_object(Bucket=app.config["BUCKET_NAME"], Key=thumbnailfilename, Body=img)
 
         return True
@@ -102,6 +103,7 @@ def upload():
                 # create thumbnail after saving
                 if mime_type.startswith('image'):
                     create_thumbnail(filename)
+                    print 'It is a image file ' + filename                    
                 
                 # get file size after saving
                 size = files.content_length
