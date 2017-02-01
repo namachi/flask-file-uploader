@@ -66,9 +66,9 @@ def gen_file_name(filename):
 def create_thumbnail(image):
     try:
         base_width = 80
-        with open('filename', 'wb') as data:
-        	bucket.download_fileobj(image, data)
-		img = Image.open(data)
+		obj = bucket.Object(image)
+		content = obj.get()	
+		img = Image.open(content['Body'].read())
         w_percent = (base_width / float(img.size[0]))
         h_size = int((float(img.size[1]) * float(w_percent)))
         img = img.resize((base_width, h_size), PIL.Image.ANTIALIAS)
