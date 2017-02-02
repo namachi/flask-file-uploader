@@ -137,8 +137,8 @@ def upload():
 
         for obj in bucket.objects.all():  
 			name = obj.key
-			#size = obj.size
-			size = obj.content_length
+			size = obj.size
+			#size = obj.content_length
 			print 'Object Key <<' + name + '>> size is <<' + str(size)  + '>>'
 			file_saved = s3uploadfile(name=name, size=size)
 			file_display.append(file_saved.get_file()) 
