@@ -3,22 +3,24 @@ import boto3
 import uuid
 
 class s3uploadfile():
-    def __init__(self, s3client, name, type=None, size=None, url=None, not_allowed_msg=''):
-		self.s3client = s3client
+    def __init__(self, name, type=None, size=None, not_allowed_msg=''):
 		self.name = name
 		self.type = type
 		self.size = size
 		self.not_allowed_msg = not_allowed_msg
-		#self.url = "data/%s" % name
-		self.url = url
+		self.url = "data/%s" % name
 		self.thumbnail_url = "thumbnail/%s" % name
 		self.delete_url = "delete/%s" % name
 		self.delete_type = "DELETE"
 
 
     def is_image(self):
-        fileName, fileExtension = os.path.splitext(self.name.lower())
-
+        #fileName, fileExtension = os.path.splitext(self.name.lower())
+        #fileName, fileExtension = self.name.split('.')
+        fileName = str({self.name})
+        fileparts = fileName.split('.')
+        fileExtension = fileparts.pop()
+        
         if fileExtension in ['.jpg', '.png', '.jpeg', '.bmp']:
             return True
 
