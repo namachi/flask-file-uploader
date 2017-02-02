@@ -8,11 +8,14 @@
 import os
 import PIL
 from PIL import Image
+import cStringIO as StringIO
 import simplejson
 import traceback
 import boto3
 import uuid
 import imghdr
+import io
+import binascii
 
 from flask import Flask, request, Response, make_response, render_template, redirect, url_for, send_from_directory
 from flask_bootstrap import Bootstrap
@@ -23,11 +26,10 @@ from lib.s3upload_file import s3uploadfile
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'hard to guess string'
+#app.config['SECRET_KEY'] = 'hard to guess string'
 app.config['BUCKET_NAME'] = 'flaskdemo'.format(uuid.uuid4())
-app.config['THUMBNAIL_FOLDER'] = '/thumbnail/'
-#app.config['UPLOAD_FOLDER'] = 'data/'
-#app.config['THUMBNAIL_FOLDER'] = 'data/thumbnail/'
+app.config['THUMBNAIL_FOLDER'] = 'thumbnail/'
+app.config['TEMP_FOLDER'] = '/tmp/flaskdemo/'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 
@@ -63,19 +65,22 @@ def gen_file_name(filename):
     return filename
 
 
-def create_thumbnail(image):
+def create_thumbnail(imagefilename):
     try:
         base_width = 80
-		obj = bucket.Object(image)
-		content = obj.get()	
-		img = Image.open(content['Body'].read())
+        #print 'Image filename is <<' + imagefilename + '>>'
+        tmp_file_path = app.config['TEMP_FOLDER'] + imagefilename
+        s3client.download_file(app.config["BUCKET_NAME"], imagefilename, tmp_file_path)
+        img = Image.open(tmp_file_path)
         w_percent = (base_width / float(img.size[0]))
         h_size = int((float(img.size[1]) * float(w_percent)))
         img = img.resize((base_width, h_size), PIL.Image.ANTIALIAS)
-        thumbnailfilename = 'thumbnail/' + image
-        print 'Thumbnail filename create is ' + thumbnailfilename
-        s3client.put_object(Bucket=app.config["BUCKET_NAME"], Key=thumbnailfilename, Body=img)
-
+        
+        #thumbnailfilename = 'thumbnail/' + imagefilename
+        thumbnailfilename = app.config["THUMBNAIL_FOLDER"] + imagefilename
+        #print 'Thumbnail filename create is <<' + thumbnailfilename + '>>'
+        s3client.upload_file(tmp_file_path, app.config["BUCKET_NAME"], thumbnailfilename)
+        
         return True
 
     except:
@@ -102,11 +107,13 @@ def upload():
                 
                 # create thumbnail after saving
                 if mime_type.startswith('image'):
-                    create_thumbnail(filename)
-                    print 'It is a image file ' + filename                    
+                	#print 'It is a image file ' + filename                
+                	create_thumbnail(filename)
+
                 
                 # get file size after saving
                 size = files.content_length
+                #print 'File size is ' + str(size)
 
                 # return json for js call back
                 result = s3uploadfile(name=filename, type=mime_type, size=size)
@@ -131,7 +138,6 @@ def upload():
 
 @app.route("/delete/<string:filename>", methods=['DELETE'])
 def delete(filename):
-	#obj = bucket.Object(filename)
 	response = bucket.delete_objects(
 		Delete={
 			'Objects': [
@@ -141,6 +147,17 @@ def delete(filename):
 			]
 		}
 	)
+	thumbnailfilename = app.config["THUMBNAIL_FOLDER"] + filename	
+	thumbnailresponse = bucket.delete_objects(
+		Delete={
+			'Objects': [
+				{
+					'Key' : thumbnailfilename,
+				}
+			]
+		}
+	)
+	
 	return simplejson.dumps({filename: 'True'})
 
 
@@ -148,6 +165,7 @@ def delete(filename):
 @app.route("/thumbnail/<string:filename>", methods=['GET'])
 def get_thumbnail(filename):
 	thumbnailfilename = 'thumbnail/' + filename
+	print 'Thumbnail image name is ' + thumbnailfilename
 	obj = bucket.Object(thumbnailfilename)
 	content = obj.get()	
 	response = make_response(content['Body'].read())
@@ -157,6 +175,7 @@ def get_thumbnail(filename):
 
 @app.route("/data/<string:filename>", methods=['GET'])
 def get_file(filename):
+	print 'Filename name is ' + filename
 	obj = bucket.Object(filename)
 	content = obj.get()	
 	response = make_response(content['Body'].read())
