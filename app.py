@@ -34,7 +34,7 @@ app.config['TEMP_FOLDER'] = '/tmp/flaskdemo/'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 
-ALLOWED_EXTENSIONS = set(['txt', 'gif', 'png', 'jpg', 'jpeg', 'bmp', 'rar', 'zip', '7zip', 'doc', 'docx'])
+ALLOWED_EXTENSIONS = set(['txt', 'csv', 'gif', 'png', 'jpg', 'jpeg', 'bmp', 'rar', 'zip', '7zip', 'doc', 'docx'])
 IGNORED_FILES = set(['.gitignore'])
 
 bootstrap = Bootstrap(app)
